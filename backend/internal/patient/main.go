@@ -13,7 +13,7 @@ import (
 func main() {
 	// 1. เชื่อมต่อ PostgreSQL
 	// ทริค: ถ้าเชื่อม Supabase ไม่ติด ลองเปลี่ยน sslmode=disable เป็น sslmode=require
-	dsn := "host=aws-1-ap-southeast-1.pooler.supabase.com user=postgres.efawsreegafuebccehef password=MDD_password160369 dbname=postgres port=5432 sslmode=disable"
+	dsn := "host=aws-1-ap-southeast-1.pooler.supabase.com user=postgres.efawsreegafuebccehef password=MDD_password160369 dbname=postgres port=5432 sslmode=require"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("Failed to connect to database")
