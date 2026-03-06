@@ -34,6 +34,5 @@ func main() {
 	r.PUT("/medical_records/:id", medicalRecordHandler.Update)
 	r.DELETE("/medical_records/:id", medicalRecordHandler.Delete)
 
-	log.Printf("🚀 Medical Records Service running on port %s", cfg.Server.Port)
-	r.Run(":" + cfg.Server.Port)
+	r.Run(":8081")
 }
