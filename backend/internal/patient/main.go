@@ -1,12 +1,13 @@
 package main
 
 import (
+	"log"
+	"patient/config"
+	"patient/database"
 	"patient/handler"
 	"patient/model"
 	"patient/repository"
-	"patient/config"
-	"patient/database"
-	"log"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,21 +17,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
+
+	// 2. เชื่อมต่อฐานข้อมูล
 	db, err := database.NewPostgresConnection(cfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// 2. Auto Migrate
+	// 3. Auto Migrate
 	db.AutoMigrate(&model.Patient{})
 
-	// 3. เริ่มใช้งาน Repository (คุยกับ DB)
+	// 4. เริ่มใช้งาน Repository (คุยกับ DB)
 	patientRepo := repository.NewPatientRepository(db)
 
-	// 4. เริ่มใช้งาน Handler (ส่ง Repo ให้ Handler ไปใช้)
+	// 5. เริ่มใช้งาน Handler (ส่ง Repo ให้ Handler ไปใช้)
 	patientHandler := handler.NewPatientHandler(patientRepo)
 
-	// 5. ตั้งค่า Gin Router และผูกเส้นทาง (Routes) ให้เรียกใช้ Handler
+	// 6. ตั้งค่า Gin Router และผูกเส้นทาง (Routes) ให้เรียกใช้ Handler
 	r := gin.Default()
 
 	r.POST("/patients", patientHandler.Create)
@@ -39,6 +42,7 @@ func main() {
 	r.PUT("/patients/:id", patientHandler.Update)
 	r.DELETE("/patients/:id", patientHandler.Delete)
 
-	// 6. รัน Server
-	r.Run(":8080")
+	// 7. รัน Server
+	log.Printf("🚀 Patient Service running on port %s", cfg.Server.Port)
+	r.Run(":" + cfg.Server.Port)
 }
