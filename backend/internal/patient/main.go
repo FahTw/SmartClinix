@@ -1,22 +1,28 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"patient/config"
+	"patient/database"
 	"patient/model"
 	"patient/repository"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
-	// 1. เชื่อมต่อ PostgreSQL
-	// ทริค: ถ้าเชื่อม Supabase ไม่ติด ลองเปลี่ยน sslmode=disable เป็น sslmode=require
-	dsn := "host=aws-1-ap-southeast-1.pooler.supabase.com user=postgres.efawsreegafuebccehef password=MDD_password160369 dbname=postgres port=5432 sslmode=require"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// 1. โหลด Config จาก Environment Variables
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		panic("Failed to connect to database")
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	// 2. เชื่อมต่อ PostgreSQL อย่างปลอดภัย
+	db, err := database.NewPostgresConnection(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
 	// 2. Auto Migrate
@@ -56,6 +62,22 @@ func main() {
 		c.JSON(http.StatusOK, patients)
 	})
 
-	// 5. รัน Server ที่ Port 8080 (หรือเลขอื่นก็ได้)
-	r.Run(":8080") 
+	r.GET("/patients/:id", func(c *gin.Context) {
+		idParam := c.Param("id")
+		var id uint
+		if _, err := fmt.Sscanf(idParam, "%d", &id); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid patient ID"})
+			return
+		}
+		patient, err := patientRepo.GetByID(id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Patient not found"})
+			return
+		}
+		c.JSON(http.StatusOK, patient)
+	})
+
+	// 5. รัน Server ที่ Port จาก Config
+	log.Printf("🚀 Patient Service running on port %s", cfg.Server.Port)
+	r.Run(":8081")
 }

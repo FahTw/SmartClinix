@@ -1,35 +1,37 @@
 package main
 
 import (
+	"appointment/config"
+	"appointment/database"
+	"appointment/model"
+	"appointment/repository"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
-	"appointment/model"
-	"appointment/repository"
-
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
-	// 1. เชื่อมต่อ Supabase
-	dsn := "host=aws-1-ap-southeast-1.pooler.supabase.com user=postgres.efawsreegafuebccehef password=MDD_password160369 dbname=postgres port=5432 sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		panic("Failed to connect to database")
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 2. Auto Migrate
+	db, err := database.NewPostgresConnection(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+
 	db.AutoMigrate(&model.Appointment{})
 
-	// 3. เริ่มใช้งาน Repository
 	apptRepo := repository.NewAppointmentRepository(db)
 
 	r := gin.Default()
-
 	// API: สร้างนัดหมายใหม่
 	r.POST("/appointments", func(c *gin.Context) {
 		var appt model.Appointment
@@ -60,7 +62,7 @@ func main() {
 		// นำ Date และ Time มาประกอบกัน เช่น "2026-03-10 09:30"
 		dateTimeStr := fmt.Sprintf("%s %s", existingAppt.Date, existingAppt.Time)
 		apptTime, parseErr := time.Parse("2006-01-02 15:04", dateTimeStr) // Format มาตรฐานของ Go
-		
+
 		if parseErr == nil {
 			// คำนวณเวลาปัจจุบัน กับ เวลานัดหมาย
 			hoursLeft := time.Until(apptTime).Hours()
@@ -93,5 +95,7 @@ func main() {
 		c.JSON(http.StatusOK, existingAppt)
 	})
 
-	r.Run(":8081") // ใช้ Port 8081 เพื่อไม่ให้ชนกับ Patient Service (8080)
+	// รัน Server ที่ Port จาก Config
+	log.Printf("🚀 Appointment Service running on port %s", cfg.Server.Port)
+	r.Run(":" + cfg.Server.Port)
 }
