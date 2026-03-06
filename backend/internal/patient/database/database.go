@@ -14,13 +14,13 @@ import (
 func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
 	// สร้าง DSN จาก config (ไม่ hardcode)
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s",
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.Database.Host,
 		cfg.Database.User,
 		cfg.Database.Password,
 		cfg.Database.DBName,
 		cfg.Database.Port,
-		// cfg.Database.SSLMode,
+		cfg.Database.SSLMode,
 	)
 
 	// เชื่อมต่อฐานข้อมูลพร้อม PrepareStmt เพื่อป้องกัน SQL Injection
