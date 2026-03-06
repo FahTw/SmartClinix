@@ -4,18 +4,21 @@ import (
 	"patient/handler"
 	"patient/model"
 	"patient/repository"
-
+	"patient/config"
+	"patient/database"
+	"log"
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
-	// 1. เชื่อมต่อ PostgreSQL (Supabase)
-	dsn := "host=aws-1-ap-southeast-1.pooler.supabase.com user=postgres.efawsreegafuebccehef password=MDD_password160369 dbname=postgres port=5432 sslmode=require"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// 1. โหลด Config จาก Environment Variables
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		panic("Failed to connect to database")
+		log.Fatalf("Failed to load config: %v", err)
+	}
+	db, err := database.NewPostgresConnection(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
 	// 2. Auto Migrate
