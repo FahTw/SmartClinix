@@ -1,7 +1,7 @@
 package main
 
 import (
-	"net/http"
+	"patient/handler"
 	"patient/model"
 	"patient/repository"
 
@@ -11,8 +11,7 @@ import (
 )
 
 func main() {
-	// 1. เชื่อมต่อ PostgreSQL
-	// ทริค: ถ้าเชื่อม Supabase ไม่ติด ลองเปลี่ยน sslmode=disable เป็น sslmode=require
+	// 1. เชื่อมต่อ PostgreSQL (Supabase)
 	dsn := "host=aws-1-ap-southeast-1.pooler.supabase.com user=postgres.efawsreegafuebccehef password=MDD_password160369 dbname=postgres port=5432 sslmode=require"
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -22,40 +21,21 @@ func main() {
 	// 2. Auto Migrate
 	db.AutoMigrate(&model.Patient{})
 
-	// 3. เริ่มใช้งาน Repository
+	// 3. เริ่มใช้งาน Repository (คุยกับ DB)
 	patientRepo := repository.NewPatientRepository(db)
 
-	// 4. ตั้งค่า Gin Router (ตัวรับ API)
+	// 4. เริ่มใช้งาน Handler (ส่ง Repo ให้ Handler ไปใช้)
+	patientHandler := handler.NewPatientHandler(patientRepo)
+
+	// 5. ตั้งค่า Gin Router และผูกเส้นทาง (Routes) ให้เรียกใช้ Handler
 	r := gin.Default()
 
-	// --- เขียน API Endpoints ตรงนี้ ---
+	r.POST("/patients", patientHandler.Create)
+	r.GET("/patients", patientHandler.GetAll)
+	r.GET("/patients/:id", patientHandler.GetByID)
+	r.PUT("/patients/:id", patientHandler.Update)
+	r.DELETE("/patients/:id", patientHandler.Delete)
 
-	// API: เพิ่มผู้ป่วยใหม่ (POST /patients)
-	r.POST("/patients", func(c *gin.Context) {
-		var p model.Patient
-		if err := c.ShouldBindJSON(&p); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		if err := patientRepo.Create(&p); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create patient"})
-			return
-		}
-
-		c.JSON(http.StatusCreated, p)
-	})
-
-	// API: ดึงรายชื่อผู้ป่วยทั้งหมด (GET /patients)
-	r.GET("/patients", func(c *gin.Context) {
-		patients, err := patientRepo.FindAll()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch patients"})
-			return
-		}
-		c.JSON(http.StatusOK, patients)
-	})
-
-	// 5. รัน Server ที่ Port 8080 (หรือเลขอื่นก็ได้)
-	r.Run(":8080") 
+	// 6. รัน Server
+	r.Run(":8080")
 }
