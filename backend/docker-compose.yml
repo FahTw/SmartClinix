@@ -1,4 +1,76 @@
-services
+services:
+  auth-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mdd-network
+
+  patient-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: patient_db
+      POSTGRES_USER: patient_user
+      POSTGRES_PASSWORD: patient_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - patient_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patient_user -d patient_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mdd-network
+
+  medical-records-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: medical_records_db
+      POSTGRES_USER: medical_user
+      POSTGRES_PASSWORD: medical_pass
+    ports:
+      - "5435:5432"
+    volumes:
+      - medical_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medical_user -d medical_records_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mdd-network
+
+  appointment-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: appointment_db
+      POSTGRES_USER: appointment_user
+      POSTGRES_PASSWORD: appointment_pass
+    ports:
+      - "5436:5432"
+    volumes:
+      - appointment_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appointment_user -d appointment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mdd-network
+
   auth-service:
     build:
       context: ./internal/auth
@@ -6,11 +78,19 @@ services
     ports:
       - "8082:8082"
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=auth-db
       - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=mdd_db
+      - DB_USER=auth_user
+      - DB_PASSWORD=auth_pass
+      - DB_NAME=auth_db
+      - DB_SSLMODE=disable
+      - SSL_MODE=disable
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - mdd-network
+    restart: unless-stopped
 
   patient-service:
     build:
@@ -19,11 +99,19 @@ services
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=patient-db
       - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=mdd_db
+      - DB_USER=patient_user
+      - DB_PASSWORD=patient_pass
+      - DB_NAME=patient_db
+      - DB_SSLMODE=disable
+      - SERVER_PORT=8080
+    depends_on:
+      patient-db:
+        condition: service_healthy
+    networks:
+      - mdd-network
+    restart: unless-stopped
 
   medical-records-service:
     build:
@@ -32,22 +120,47 @@ services
     ports:
       - "8081:8081"
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=medical-records-db
       - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=mdd_db
+      - DB_USER=medical_user
+      - DB_PASSWORD=medical_pass
+      - DB_NAME=medical_records_db
+      - DB_SSLMODE=disable
+      - SERVER_PORT=8081
+    depends_on:
+      medical-records-db:
+        condition: service_healthy
+    networks:
+      - mdd-network
+    restart: unless-stopped
 
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: mdd_db
+  appointment-service:
+    build:
+      context: ./internal/appointment
+      dockerfile: Dockerfile
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - "8083:8083"
+    environment:
+      - DB_HOST=appointment-db
+      - DB_PORT=5432
+      - DB_USER=appointment_user
+      - DB_PASSWORD=appointment_pass
+      - DB_NAME=appointment_db
+      - DB_SSLMODE=disable
+      - SERVER_PORT=8083
+    depends_on:
+      appointment-db:
+        condition: service_healthy
+    networks:
+      - mdd-network
+    restart: unless-stopped
+
+networks:
+  mdd-network:
+    driver: bridge
 
 volumes:
-  postgres_data:
+  auth_pgdata:
+  patient_pgdata:
+  medical_pgdata:
+  appointment_pgdata:
