@@ -9,6 +9,7 @@ type AppointmentRepository interface {
 	Create(appt *model.Appointment) error
 	GetByID(id uint) (*model.Appointment, error)
 	Update(appt *model.Appointment) error
+	FindAll() ([]*model.Appointment, error)
 }
 
 type appointmentRepo struct {
@@ -18,6 +19,12 @@ type appointmentRepo struct {
 func NewAppointmentRepository(db *gorm.DB) AppointmentRepository {
 	return &appointmentRepo{db}
 }
+func (r *appointmentRepo) FindAll() ([]*model.Appointment, error) {
+	var appts []*model.Appointment
+	err := r.db.Find(&appts).Error
+	return appts, err
+}
+
 
 func (r *appointmentRepo) Create(appt *model.Appointment) error {
 	return r.db.Create(appt).Error

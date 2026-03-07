@@ -37,10 +37,11 @@ func main() {
 	r := gin.Default()
 
 	// ผูกเส้นทางไปที่ Handler
+	r.GET("/appointments", apptHandler.GetAll)
 	r.POST("/appointments", apptHandler.Create)
 	r.PUT("/appointments/:id", apptHandler.Update)
 
 	// 7. รัน Server
-	log.Printf("🚀 Appointment Service running on port %s", cfg.Server.Port)
-	r.Run(":" + cfg.Server.Port)
+	log.Printf("🚀 Appointment Service running on port 8083")
+	r.Run(":8083")
 }

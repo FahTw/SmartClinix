@@ -1,12 +1,15 @@
 package database
+
 import (
+	"auth/config"
 	"fmt"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-
-func NewPostgresConnection(cfg *Config) (*gorm.DB, error) {// สร้าง DSN จาก config (ไม่ hardcode)
+func NewPostgresConnection(cfg *config.Config) (*gorm.DB, error) {
+	// สร้าง DSN จาก config (ไม่ hardcode)
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.Database.Host,
@@ -25,4 +28,5 @@ func NewPostgresConnection(cfg *Config) (*gorm.DB, error) {// สร้าง DS
 	}
 
 	return db, nil
+	
 }

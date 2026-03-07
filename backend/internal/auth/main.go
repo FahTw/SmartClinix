@@ -1,37 +1,50 @@
 package main
 
 import (
-
+	"auth/config"
+	"auth/database"
+	"auth/handler"
+	"auth/middleware"
+	"auth/model"
+	"auth/repository"
 	"log"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// 1. โหลด Config
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		log.Fatalf("failed to load config: %v", err)
 	}
 
-	// 2. เชื่อมต่อ DB
 	db, err := database.NewPostgresConnection(cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	// 3. Auto Migrate
+	if err := db.AutoMigrate(&model.User{}); err != nil {
+		log.Fatalf("failed to auto migrate: %v", err)
+	}
+	db.AutoMigrate(&model.User{})
 
-	// 4. เริ่มใช้งาน Repository
+	repo := repository.NewAuthRepository(db, cfg.JWTSecret)
+	authHandler := handler.NewAuthHandler(repo)
 
-	// 5. เริ่มใช้งาน Handler (โยน Repo ให้ Handler)
-
-	// 6. ตั้งค่า Gin Router
 	r := gin.Default()
 
-	// ผูกเส้นทางไปที่ Handler
+	authGroup := r.Group("/auth")
+	{
+		authGroup.POST("/register", authHandler.Register)
+		authGroup.POST("/login", authHandler.Login)
 
-	// 7. รัน Server
-	log.Printf("🚀 Auth Service running on port %s", cfg.Server.Port)
-	r.Run(":" + cfg.Server.Port)
+		protected := authGroup.Group("")
+		protected.Use(middleware.RequireAuth())
+		protected.GET("/me", authHandler.Me)
+	}
+
+	log.Printf("Auth Service running on port 8082")
+	if err := r.Run(":8082"); err != nil {
+		log.Fatalf("server failed: %v", err)
+	}
 }

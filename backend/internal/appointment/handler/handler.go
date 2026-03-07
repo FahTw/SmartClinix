@@ -33,7 +33,14 @@ func (h *AppointmentHandler) Create(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, appt)
 }
-
+func (h *AppointmentHandler) GetAll(c *gin.Context) {
+	appts, err := h.repo.FindAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, appts)
+}
 // 🟡 API: อัปเดตการนัดหมาย (พร้อมเช็คเงื่อนไข 24 ชั่วโมง)
 func (h *AppointmentHandler) Update(c *gin.Context) {
 	idParam := c.Param("id")
