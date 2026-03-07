@@ -8,6 +8,7 @@ import (
 	"medical_records/model"
 	"medical_records/repository"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,11 +29,16 @@ func main() {
 
 	medicalRecordHandler := handler.NewMedicalRecordHandler(medicalRecordRepo)
 	r := gin.Default()
-	r.POST("/medical_records", medicalRecordHandler.Create)
-	r.GET("/medical_records", medicalRecordHandler.GetAll)
-	r.GET("/medical_records/:id", medicalRecordHandler.GetByID)
-	r.PUT("/medical_records/:id", medicalRecordHandler.Update)
-	r.DELETE("/medical_records/:id", medicalRecordHandler.Delete)
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Content-Type", "Authorization"},
+	}))
+	r.POST("/medical-records", medicalRecordHandler.Create)
+	r.GET("/medical-records", medicalRecordHandler.GetAll)
+	r.GET("/medical-records/:id", medicalRecordHandler.GetByID)
+	r.PUT("/medical-records/:id", medicalRecordHandler.Update)
+	r.DELETE("/medical-records/:id", medicalRecordHandler.Delete)
 
 	r.Run(":8081")
 }

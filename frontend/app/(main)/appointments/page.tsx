@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import AppointRegist, { AppointFormData } from "@/components/feature/AppointRegist"
 import Header from "@/components/layout/Header"
+import { getAppointments, createAppointment } from "@/lib/api"
 
 type AppointmentStatus = "scheduled" | "completed" | "cancelled"
 
@@ -19,32 +20,15 @@ interface Appointment {
   status: AppointmentStatus
 }
 
-const initialAppointments: Appointment[] = [
-  {
-    id: 1,
-    patientName: "สมชาย ใจดี",
-    doctorName: "นพ.ธีรภพ แสงทอง",
-    department: "อายุรกรรมทั่วไป",
-    date: "2026-03-08",
-    time: "09:30",
-    appointmentType: "ติดตามอาการ",
-    symptoms: "เวียนศีรษะและอ่อนเพลีย",
-    notes: "",
-    status: "scheduled",
-  },
-  {
-    id: 2,
-    patientName: "นงนุช สวยงาม",
-    doctorName: "พญ.ปวีณา พงศ์ดี",
-    department: "ผิวหนัง",
-    date: "2026-03-08",
-    time: "11:00",
-    appointmentType: "ปรึกษาอาการเฉพาะทาง",
-    symptoms: "ผื่นคันเรื้อรัง",
-    notes: "แพ้เพนิซิลลิน",
-    status: "scheduled",
-  },
-]
+interface ApiAppointment {
+  id: number
+  patient_id?: number
+  doctor_id?: number
+  date: string
+  time: string
+  description?: string
+  status?: string
+}
 
 const statusClassMap: Record<AppointmentStatus, string> = {
   scheduled: "bg-blue-100 text-blue-700",
@@ -73,10 +57,52 @@ const appointmentTypeLabelMap: Record<string, string> = {
   procedure: "ทำหัตถการ",
 }
 
+function normalizeStatus(status?: string): AppointmentStatus {
+  if (status === "completed" || status === "cancelled") {
+    return status
+  }
+  return "scheduled"
+}
+
+function mapApiAppointment(item: ApiAppointment): Appointment {
+  return {
+    id: item.id,
+    patientName: `Patient #${item.patient_id ?? "-"}`,
+    doctorName: `Doctor #${item.doctor_id ?? "-"}`,
+    department: "-",
+    date: item.date,
+    time: item.time,
+    appointmentType: "-",
+    symptoms: item.description || "-",
+    notes: "",
+    status: normalizeStatus(item.status),
+  }
+}
+
 export default function AppointmentPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const handleSubmit = async (formData: AppointFormData) => {
+    try {
+      const newAppointment = await createAppointment(formData)
+      setAppointments((prev) => [newAppointment, ...prev])
+    } catch (error) {
+      console.error("Error creating appointment:", error)
+    }
+  }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getAppointments()
+        setAppointments(data)
+      } catch (error) {
+        console.error("Error fetching appointments:", error)
+      }
+    }
+    fetchData()
+  }, [])
+  
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter((appointment) => {
@@ -90,22 +116,6 @@ export default function AppointmentPage() {
     })
   }, [appointments, searchTerm])
 
-  const handleCreateAppointment = (formData: AppointFormData) => {
-    const newAppointment: Appointment = {
-      id: appointments.length > 0 ? Math.max(...appointments.map((item) => item.id)) + 1 : 1,
-      patientName: formData.patientName,
-      doctorName: formData.doctorName,
-      department: departmentLabelMap[formData.department] ?? formData.department,
-      date: formData.date,
-      time: formData.time,
-      appointmentType: appointmentTypeLabelMap[formData.appointmentType] ?? formData.appointmentType,
-      symptoms: formData.symptoms,
-      notes: formData.notes,
-      status: "scheduled",
-    }
-
-    setAppointments((prev) => [newAppointment, ...prev])
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -200,7 +210,7 @@ export default function AppointmentPage() {
         </div>
       </div>
 
-      <AppointRegist open={isDialogOpen} onOpenChange={setIsDialogOpen} onSubmit={handleCreateAppointment} />
+      <AppointRegist open={isDialogOpen} onOpenChange={setIsDialogOpen} onSubmit={handleSubmit} />
     </div>
   )
 }

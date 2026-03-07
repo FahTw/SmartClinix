@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -7,37 +7,39 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { createPatient } from '@/lib/api'
 
 interface PatientFormData {
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-    dateOfBirth: string
+    first_name: string
+    last_name: string
+    age: string
     gender: string
-    bloodType: string
-    address: string
+    personal_id: string
+    pharmacist_history: string
+    disease_history: string
 }
 
 
 interface PatientRegistProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    onCreated?: () => void | Promise<void>
 }
 
-const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
+const PatientRegist = ({ open, onOpenChange, onCreated }: PatientRegistProps) => {
     const [formData, setFormData] = useState<PatientFormData>({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        dateOfBirth: '',
+        first_name: '',
+        last_name: '',
+        age: '',
         gender: '',
-        bloodType: '',
-        address: '',
+        personal_id: '',
+        pharmacist_history: '',
+        disease_history: '',
     })
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [errorMessage, setErrorMessage] = useState('')
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setFormData(prev => ({
             ...prev,
@@ -45,21 +47,57 @@ const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
         }))
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        console.log('Patient Registration Data:', formData)
-        // TODO: Send data to backend API
+    const resetForm = () => {
         setFormData({
-            firstName: '',
-            lastName: '',
-            email: '',
-            phone: '',
-            dateOfBirth: '',
+            first_name: '',
+            last_name: '',
+            age: '',
             gender: '',
-            bloodType: '',
-            address: '',
+            personal_id: '',
+            pharmacist_history: '',
+            disease_history: '',
         })
-        onOpenChange(false)
+    }
+
+    const parseHistory = (value: string): string[] => {
+        return value
+            .split(',')
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0)
+    }
+
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault()
+        setErrorMessage('')
+
+        const age = Number(formData.age)
+        if (!Number.isInteger(age) || age < 0) {
+            setErrorMessage('กรุณากรอกอายุเป็นตัวเลขที่ถูกต้อง')
+            return
+        }
+
+        const payload = {
+            first_name: formData.first_name.trim(),
+            last_name: formData.last_name.trim(),
+            age,
+            gender: formData.gender,
+            personal_id: formData.personal_id.trim(),
+            pharmacist_history: parseHistory(formData.pharmacist_history),
+            disease_history: parseHistory(formData.disease_history),
+        }
+
+        try {
+            setIsSubmitting(true)
+            await createPatient(payload)
+            await onCreated?.()
+            resetForm()
+            onOpenChange(false)
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to create patient'
+            setErrorMessage(message)
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     return (
@@ -73,6 +111,12 @@ const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+                    {errorMessage && (
+                        <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {errorMessage}
+                        </div>
+                    )}
+
                     {/* Name Row */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -81,8 +125,8 @@ const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
                             </label>
                             <input
                                 type="text"
-                                name="firstName"
-                                value={formData.firstName}
+                                name="first_name"
+                                value={formData.first_name}
                                 onChange={handleInputChange}
                                 required
                                 placeholder="ชื่อจริง"
@@ -95,8 +139,8 @@ const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
                             </label>
                             <input
                                 type="text"
-                                name="lastName"
-                                value={formData.lastName}
+                                name="last_name"
+                                value={formData.last_name}
                                 onChange={handleInputChange}
                                 required
                                 placeholder="นามสกุล"
@@ -105,53 +149,41 @@ const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
                         </div>
                     </div>
 
-                    {/* Contact Info Row */}
+                    {/* Age / Gender / Personal ID */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                อีเมล *
+                                อายุ *
                             </label>
                             <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
+                                type="number"
+                                min={0}
+                                name="age"
+                                value={formData.age}
                                 onChange={handleInputChange}
                                 required
-                                placeholder="example@email.com"
+                                placeholder="เช่น 35"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                เบอร์โทรศัพท์ *
+                                เลขบัตรประชาชน *
                             </label>
                             <input
-                                type="tel"
-                                name="phone"
-                                value={formData.phone}
+                                type="text"
+                                name="personal_id"
+                                value={formData.personal_id}
                                 onChange={handleInputChange}
                                 required
-                                placeholder="0xxxxxxxxx"
+                                placeholder="13 หลัก"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                     </div>
 
-                    {/* Personal Info Row */}
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                วันเกิด *
-                            </label>
-                            <input
-                                type="date"
-                                name="dateOfBirth"
-                                value={formData.dateOfBirth}
-                                onChange={handleInputChange}
-                                required
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
+                    {/* Gender */}
+                    <div className="grid grid-cols-1 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 เพศ *
@@ -169,39 +201,36 @@ const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
                                 <option value="other">อื่นๆ</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                หมู่เลือด
-                            </label>
-                            <select
-                                name="bloodType"
-                                value={formData.bloodType}
-                                onChange={handleInputChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">-- เลือก --</option>
-                                <option value="O">O</option>
-                                <option value="A">A</option>
-                                <option value="B">B</option>
-                                <option value="AB">AB</option>
-                            </select>
-                        </div>
                     </div>
 
-                    {/* Address */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            ที่อยู่ *
-                        </label>
-                        <textarea
-                            name="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="เลขที่, ถนน, แขวง, เขต, จังหวัด, รหัสไปรษณีย์"
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                    {/* History fields */}
+                    <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                ประวัติการแพ้ยา (คั่นด้วย comma)
+                            </label>
+                            <textarea
+                                name="pharmacist_history"
+                                value={formData.pharmacist_history}
+                                onChange={handleInputChange}
+                                rows={3}
+                                placeholder="เช่น penicillin, aspirin"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                ประวัติโรค (คั่นด้วย comma)
+                            </label>
+                            <textarea
+                                name="disease_history"
+                                value={formData.disease_history}
+                                onChange={handleInputChange}
+                                rows={3}
+                                placeholder="เช่น เบาหวาน, ความดันสูง"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
                     </div>
 
                     {/* Buttons */}
@@ -215,9 +244,10 @@ const PatientRegist = ({ open, onOpenChange }: PatientRegistProps) => {
                         </button>
                         <button
                             type="submit"
+                            disabled={isSubmitting}
                             className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                         >
-                            บันทึก
+                            {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
                         </button>
                     </div>
                 </form>

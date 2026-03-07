@@ -8,6 +8,7 @@ import (
 	"appointment/repository"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,6 +36,11 @@ func main() {
 
 	// 6. ตั้งค่า Gin Router
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Content-Type", "Authorization"},
+	}))
 
 	// ผูกเส้นทางไปที่ Handler
 	r.GET("/appointments", apptHandler.GetAll)
