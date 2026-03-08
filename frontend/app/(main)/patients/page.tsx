@@ -96,6 +96,7 @@ const PatientPage = () => {
                     </div>
                 </div>
 
+{/* table */}
                 <div className="mt-6 bg-white rounded-lg shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">

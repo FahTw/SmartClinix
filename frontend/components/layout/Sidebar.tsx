@@ -41,6 +41,15 @@ const Sidebar = () => {
       ),
     },
     {
+      name: 'Medical Records',
+      href: '/medical-records',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zm2 0v3h6V4" />
+        </svg>
+      ),
+    },
+    {
       name: 'Inventory',
       href: '/inventory',
       icon: (

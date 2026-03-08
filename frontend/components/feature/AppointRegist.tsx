@@ -9,14 +9,12 @@ import {
 } from "@/components/ui/dialog"
 
 export interface AppointFormData {
-    patientName: string
-    doctorName: string
-    department: string
+    patient_name: string
+    doctor_name: string
     date: string
     time: string
-    appointmentType: string
-    symptoms: string
-    notes: string
+    description: string
+    status: 'scheduled' | 'completed' | 'cancelled'
 }
 
 interface AppointRegistProps {
@@ -26,14 +24,12 @@ interface AppointRegistProps {
 }
 
 const defaultFormData: AppointFormData = {
-    patientName: '',
-    doctorName: '',
-    department: '',
+    patient_name: '',
+    doctor_name: '',
     date: '',
     time: '',
-    appointmentType: '',
-    symptoms: '',
-    notes: '',
+    description: '',
+    status: 'scheduled',
 }
 
 const AppointRegist = ({ open, onOpenChange, onSubmit }: AppointRegistProps) => {
@@ -54,6 +50,7 @@ const AppointRegist = ({ open, onOpenChange, onSubmit }: AppointRegistProps) => 
         onSubmit?.(formData)
         setFormData(defaultFormData)
         onOpenChange(false)
+        console.log('Submitted appointment data:', formData)
     }
 
     return (
@@ -80,8 +77,8 @@ const AppointRegist = ({ open, onOpenChange, onSubmit }: AppointRegistProps) => 
                             <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ป่วย *</label>
                             <input
                                 type="text"
-                                name="patientName"
-                                value={formData.patientName}
+                                name="patient_name"
+                                value={formData.patient_name}
                                 onChange={handleInputChange}
                                 required
                                 placeholder="เช่น สมชาย ใจดี"
@@ -92,8 +89,8 @@ const AppointRegist = ({ open, onOpenChange, onSubmit }: AppointRegistProps) => 
                             <label className="block text-sm font-medium text-gray-700 mb-1">แพทย์ผู้ดูแล *</label>
                             <input
                                 type="text"
-                                name="doctorName"
-                                value={formData.doctorName}
+                                name="doctor_name"
+                                value={formData.doctor_name}
                                 onChange={handleInputChange}
                                 required
                                 placeholder="เช่น นพ.ธีรภพ แสงทอง"
@@ -102,24 +99,7 @@ const AppointRegist = ({ open, onOpenChange, onSubmit }: AppointRegistProps) => 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">แผนก *</label>
-                            <select
-                                name="department"
-                                value={formData.department}
-                                onChange={handleInputChange}
-                                required
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">-- เลือกแผนก --</option>
-                                <option value="general">อายุรกรรมทั่วไป</option>
-                                <option value="pediatrics">กุมารเวช</option>
-                                <option value="orthopedic">กระดูกและข้อ</option>
-                                <option value="dermatology">ผิวหนัง</option>
-                                <option value="dentistry">ทันตกรรม</option>
-                            </select>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">วันที่นัด *</label>
                             <input
@@ -145,27 +125,10 @@ const AppointRegist = ({ open, onOpenChange, onSubmit }: AppointRegistProps) => 
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">ประเภทการนัด *</label>
-                        <select
-                            name="appointmentType"
-                            value={formData.appointmentType}
-                            onChange={handleInputChange}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">-- เลือกประเภท --</option>
-                            <option value="new">ตรวจครั้งแรก</option>
-                            <option value="follow-up">ติดตามอาการ</option>
-                            <option value="consultation">ปรึกษาอาการเฉพาะทาง</option>
-                            <option value="procedure">ทำหัตถการ</option>
-                        </select>
-                    </div>
-
-                    <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">อาการหรือเหตุผลที่มาพบแพทย์ *</label>
                         <textarea
-                            name="symptoms"
-                            value={formData.symptoms}
+                            name="description"
+                            value={formData.description}
                             onChange={handleInputChange}
                             required
                             rows={3}
@@ -175,15 +138,18 @@ const AppointRegist = ({ open, onOpenChange, onSubmit }: AppointRegistProps) => 
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">หมายเหตุเพิ่มเติม</label>
-                        <textarea
-                            name="notes"
-                            value={formData.notes}
+                        <label className="block text-sm font-medium text-gray-700 mb-1">สถานะนัดหมาย *</label>
+                        <select
+                            name="status"
+                            value={formData.status}
                             onChange={handleInputChange}
-                            rows={2}
-                            placeholder="เช่น แพ้ยา, ต้องการพบแพทย์หญิง"
+                            required
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        >
+                            <option value="scheduled">scheduled</option>
+                            <option value="completed">completed</option>
+                            <option value="cancelled">cancelled</option>
+                        </select>
                     </div>
 
                     <div className="flex gap-4 justify-end pt-4 border-t">

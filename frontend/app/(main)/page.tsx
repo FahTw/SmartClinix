@@ -11,18 +11,17 @@ type AppointmentStatus = "scheduled" | "completed" | "cancelled"
 
 interface Appointment {
   id: number
-  patientName: string
-  doctorName: string
-  department: string
+  patient_name: string
+  doctor_name: string
   date: string
   time: string
-  reason: string
+  description: string
   status: AppointmentStatus
 }
 interface ApiAppointment {
   id: number
-  patient_id?: number
-  doctor_id?: number
+  patient_name: string
+  doctor_name: string
   date: string
   time: string
   description?: string
@@ -51,12 +50,11 @@ function normalizeStatus(status?: string): AppointmentStatus {
 function mapApiAppointment(item: ApiAppointment): Appointment {
   return {
     id: item.id,
-    patientName: `Patient #${item.patient_id ?? "-"}`,
-    doctorName: `Doctor #${item.doctor_id ?? "-"}`,
-    department: "-",
+    patient_name: item.patient_name,
+    doctor_name: item.doctor_name,
     date: item.date,
     time: item.time,
-    reason: item.description || "-",
+    description: item.description || "-",
     status: normalizeStatus(item.status),
   }
 }
@@ -192,12 +190,12 @@ export default function Home() {
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">{appointment.patientName}</span>
+                        <span className="text-sm font-medium text-gray-900">{appointment.patient_name}</span>
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusClassMap[appointment.status]}`}>
                           {statusTextMap[appointment.status]}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-1">{appointment.reason}</p>
+                      <p className="text-sm text-gray-600 mb-1">{appointment.description}</p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,13 +213,7 @@ export default function Home() {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          {appointment.doctorName}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                          {appointment.department}
+                          {appointment.doctor_name}
                         </span>
                       </div>
                     </div>

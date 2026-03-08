@@ -4,8 +4,8 @@ import "time"
 
 type Appointment struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
-	PatientID   uint      `gorm:"not null" json:"patient_id"`
-	DoctorID    uint      `gorm:"not null" json:"doctor_id"`
+	PatientName   string    `gorm:"not null" json:"patient_name"`
+	DoctorName   string    `gorm:"not null" json:"doctor_name"`
 	Date        string    `gorm:"not null" json:"date"` // รูปแบบ "YYYY-MM-DD"
 	Time        string    `gorm:"not null" json:"time"` // รูปแบบ "HH:MM"
 	Description string    `json:"description"`
