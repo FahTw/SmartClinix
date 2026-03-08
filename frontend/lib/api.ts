@@ -2,12 +2,12 @@ const API_ROUTES = {
   APPOINTMENTS: 'http://localhost:8083/appointments',
   MEDICAL_RECORDS: 'http://localhost:8081/medical-records',
   PATIENTS: 'http://localhost:8080/patients',
-  
+  AUTH: 'http://localhost:8082/auth',
 };
 
 export type MedicalRecordPayload = {
-  patient_id: number;
-  doctor_id: number;
+  patient_name: string;
+  doctor_name: string;
   visit_date: string;
   diagnosis: string;
   treatment: string;
@@ -34,8 +34,95 @@ export type Appointment = AppointmentPayload & {
   updated_at?: string;
 };
 
+export type LoginPayload = {
+  username: string;
+  password: string;
+};
 
+export type RegisterPayload = {
+  username: string;
+  password: string;
+  role: 'doctor' | 'pharmacist' | 'admin';
+};
 
+export type User = {
+  id: number;
+  username: string;
+  role: string;
+};
+
+// Auth helpers
+const TOKEN_KEY = 'auth_token';
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setAuthToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function removeAuthToken(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// Auth API functions
+export async function login(credentials: LoginPayload): Promise<{ token: string }> {
+  const res = await fetch(`${API_ROUTES.AUTH}/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Login failed');
+  }
+  return res.json();
+}
+
+export async function register(userData: RegisterPayload): Promise<User> {
+  const res = await fetch(`${API_ROUTES.AUTH}/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(userData),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Registration failed');
+  }
+  return res.json();
+}
+
+export async function getCurrentUser(): Promise<User> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+  
+  const res = await fetch(`${API_ROUTES.AUTH}/me`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to get current user');
+  }
+  return res.json();
+}
+
+export function logout(): void {
+  removeAuthToken();
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+}
 
 export async function getAppointments() {
   const res = await fetch(API_ROUTES.APPOINTMENTS);

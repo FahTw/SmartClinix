@@ -12,8 +12,8 @@ import {
 } from "@/lib/api"
 
 type MedicalRecordForm = {
-  patient_id: string
-  doctor_id: string
+  patient_name: string
+  doctor_name: string
   visit_date: string
   diagnosis: string
   treatment: string
@@ -21,8 +21,8 @@ type MedicalRecordForm = {
 }
 
 const initialForm: MedicalRecordForm = {
-  patient_id: "",
-  doctor_id: "",
+  patient_name: "",
+  doctor_name: "",
   visit_date: "",
   diagnosis: "",
   treatment: "",
@@ -62,28 +62,23 @@ export default function MedicalRecordsPage() {
   }
 
   const buildPayload = (): MedicalRecordPayload | null => {
-    if (!form.patient_id || !form.doctor_id || !form.visit_date || !form.diagnosis || !form.treatment) {
+    if (!form.patient_name || !form.doctor_name || !form.visit_date || !form.diagnosis || !form.treatment) {
       setSubmitError("กรุณากรอกข้อมูลที่จำเป็นให้ครบ")
       return null
     }
 
-    const patientId = Number(form.patient_id)
-    const doctorId = Number(form.doctor_id)
-
-    if (Number.isNaN(patientId) || Number.isNaN(doctorId)) {
-      setSubmitError("patient_id และ doctor_id ต้องเป็นตัวเลข")
-      return null
-    }
 
     const parsedVisitDate = new Date(form.visit_date)
+    const patientName = form.patient_name.trim()
+    const doctorName = form.doctor_name.trim()
     if (Number.isNaN(parsedVisitDate.getTime())) {
       setSubmitError("visit_date ไม่ถูกต้อง")
       return null
     }
 
     return {
-      patient_id: patientId,
-      doctor_id: doctorId,
+      patient_name: patientName,
+      doctor_name: doctorName,
       visit_date: parsedVisitDate.toISOString(),
       diagnosis: form.diagnosis.trim(),
       treatment: form.treatment.trim(),
@@ -127,8 +122,8 @@ export default function MedicalRecordsPage() {
 
     return records.filter((record) => {
       return (
-        String(record.patient_id).includes(q) ||
-        String(record.doctor_id).includes(q) ||
+        String(record.patient_name).includes(q) ||
+        String(record.doctor_name).includes(q) ||
         record.diagnosis.toLowerCase().includes(q) ||
         record.treatment.toLowerCase().includes(q) ||
         (record.note ?? "").toLowerCase().includes(q)
@@ -146,19 +141,17 @@ export default function MedicalRecordsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             <input
-              type="number"
-              min={1}
-              placeholder="patient_id"
-              value={form.patient_id}
-              onChange={(e) => onChangeForm("patient_id", e.target.value)}
+              type="text"
+              placeholder="patient_name"
+              value={form.patient_name}
+              onChange={(e) => onChangeForm("patient_name", e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
-              type="number"
-              min={1}
-              placeholder="doctor_id"
-              value={form.doctor_id}
-              onChange={(e) => onChangeForm("doctor_id", e.target.value)}
+              type="text"
+              placeholder="doctor_name"
+              value={form.doctor_name}
+              onChange={(e) => onChangeForm("doctor_name", e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
@@ -207,7 +200,7 @@ export default function MedicalRecordsPage() {
           <div className="flex-1 w-full sm:max-w-md">
             <input
               type="text"
-              placeholder="ค้นหา patient_id, doctor_id, diagnosis, treatment, note"
+              placeholder="ค้นหา patient_name, doctor_name, diagnosis, treatment, note"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -242,8 +235,8 @@ export default function MedicalRecordsPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diagnosis</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Treatment</th>
@@ -264,8 +257,8 @@ export default function MedicalRecordsPage() {
                   filteredRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#{record.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{record.patient_id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{record.doctor_id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{record.patient_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{record.doctor_name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {new Date(record.visit_date).toLocaleString("th-TH")}
                       </td>
