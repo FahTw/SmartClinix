@@ -6,10 +6,10 @@ type Appointment struct {
 	ID          uint      `gorm:"primaryKey" json:"id"`
 	PatientName   string    `gorm:"not null" json:"patient_name"`
 	DoctorName   string    `gorm:"not null" json:"doctor_name"`
-	Date        string    `gorm:"not null" json:"date"` // รูปแบบ "YYYY-MM-DD"
-	Time        string    `gorm:"not null" json:"time"` // รูปแบบ "HH:MM"
+	Date        string    `gorm:"not null" json:"date"`
+	Time        string    `gorm:"not null" json:"time"`
 	Description string    `json:"description"`
-	Status      string    `gorm:"default:'scheduled'" json:"status"` // scheduled, cancelled, completed
+	Status      string    `gorm:"default:'scheduled'" json:"status"` 
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
