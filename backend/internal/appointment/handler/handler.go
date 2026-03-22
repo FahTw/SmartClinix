@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"appointment/repository"
 
 	"github.com/gin-gonic/gin"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type AppointmentHandler struct {
@@ -28,9 +30,31 @@ func (h *AppointmentHandler) Create(c *gin.Context) {
 		return
 	}
 	if err := h.repo.Create(&appt); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create appointment"})
-		return
-	}
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "DB Error: " + err.Error()})
+    return
+}
+
+	go func(appointmentData model.Appointment) {
+		conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		ch, _ := conn.Channel()
+		defer ch.Close()
+
+		q, _ := ch.QueueDeclare("appointment_created", false, false, false, false, nil)
+
+		body, _ := json.Marshal(appointmentData)
+
+		ch.PublishWithContext(c.Request.Context(), "", q.Name, false, false,
+			amqp.Publishing{
+				ContentType: "application/json",
+				Body:        body,
+			})
+	}(appt)
+
 	c.JSON(http.StatusCreated, appt)
 }
 func (h *AppointmentHandler) GetAll(c *gin.Context) {
