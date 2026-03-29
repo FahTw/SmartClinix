@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import {
   Appointment,
+  createMedicalRecord,
   deleteMedicalRecord,
   getAppointments,
   getDoctors,
@@ -31,13 +32,25 @@ export default function MedicalRecordsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState("")
+  const [createError, setCreateError] = useState("")
   const [updateError, setUpdateError] = useState("")
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingRecordID, setEditingRecordID] = useState<number | null>(null)
   const [diagnosis, setDiagnosis] = useState("")
   const [treatment, setTreatment] = useState("")
   const [note, setNote] = useState("")
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null)
+  const [createForm, setCreateForm] = useState({
+    appointment_id: 0,
+    patient_id: 0,
+    doctor_id: 0,
+    visit_date: "",
+    diagnosis: "Pending",
+    treatment: "Pending",
+    note: "",
+  })
 
   const fetchMedicalRecords = async (showLoading = false) => {
     try {
@@ -159,6 +172,70 @@ export default function MedicalRecordsPage() {
     }
   }
 
+  const resetCreateForm = () => {
+    setCreateForm({
+      appointment_id: 0,
+      patient_id: 0,
+      doctor_id: 0,
+      visit_date: "",
+      diagnosis: "Pending",
+      treatment: "Pending",
+      note: "",
+    })
+    setCreateError("")
+  }
+
+  const onOpenCreateDialog = (appointment?: Appointment) => {
+    setCreateError("")
+    if (appointment) {
+      const visitDate = `${appointment.date}T${appointment.time}`
+      setCreateForm({
+        appointment_id: appointment.id,
+        patient_id: appointment.patient_id,
+        doctor_id: appointment.doctor_id,
+        visit_date: visitDate,
+        diagnosis: "Pending",
+        treatment: "Pending",
+        note: "Manual fallback from frontend",
+      })
+    } else {
+      resetCreateForm()
+    }
+    setIsCreateOpen(true)
+  }
+
+  const onSubmitCreate = async () => {
+    if (!createForm.appointment_id || !createForm.patient_id || !createForm.doctor_id || !createForm.visit_date) {
+      setCreateError("กรุณากรอกข้อมูลให้ครบ: appointment_id, patient, doctor และ visit date")
+      return
+    }
+
+    try {
+      setIsCreating(true)
+      setCreateError("")
+
+      const created = await createMedicalRecord({
+        appointment_id: Number(createForm.appointment_id),
+        patient_id: Number(createForm.patient_id),
+        doctor_id: Number(createForm.doctor_id),
+        visit_date: new Date(createForm.visit_date).toISOString(),
+        diagnosis: createForm.diagnosis.trim() || "Pending",
+        treatment: createForm.treatment.trim() || "Pending",
+        note: createForm.note.trim() || undefined,
+      })
+
+      setRecords((prev) => [created, ...prev])
+      setIsCreateOpen(false)
+      resetCreateForm()
+      await fetchMedicalRecords(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create medical record"
+      setCreateError(message)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   const filteredRecords = useMemo(() => {
     const q = searchTerm.trim().toLowerCase()
     if (!q) return records
@@ -198,6 +275,9 @@ export default function MedicalRecordsPage() {
           <button onClick={() => fetchMedicalRecords(true)} className="px-5 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors">
             รีเฟรชข้อมูล
           </button>
+          <button onClick={() => onOpenCreateDialog()} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            เพิ่มประวัติการรักษา
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -214,6 +294,24 @@ export default function MedicalRecordsPage() {
             <div className="text-2xl font-bold text-gray-800 mt-1">{filteredRecords.length}</div>
           </div>
         </div>
+
+        {queuedAppointments.length > 0 && (
+          <div className="mt-6 bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-800">รายการนัดหมายที่ยังไม่มี Medical Record</h3>
+            <p className="text-xs text-gray-500 mt-1">ถ้าระบบอัตโนมัติยังไม่สร้าง สามารถกดสร้างเองได้ทันที</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {queuedAppointments.slice(0, 8).map((appointment) => (
+                <button
+                  key={appointment.id}
+                  onClick={() => onOpenCreateDialog(appointment)}
+                  className="px-3 py-2 text-sm rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100"
+                >
+                  สร้างจาก Appointment #{appointment.id}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -339,6 +437,125 @@ export default function MedicalRecordsPage() {
               className="px-3 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300"
             >
               {isUpdating ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open)
+          if (!open) {
+            resetCreateForm()
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>สร้าง Medical Record แบบ Manual</DialogTitle>
+            <DialogDescription>
+              ใช้กรณี queue หรือ consumer สะดุด เพื่อให้ workflow เดินต่อได้
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Appointment ID</label>
+              <input
+                type="number"
+                value={createForm.appointment_id || ""}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, appointment_id: Number(e.target.value) }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Visit Date</label>
+              <input
+                type="datetime-local"
+                value={createForm.visit_date}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, visit_date: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Patient</label>
+              <select
+                value={createForm.patient_id || ""}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, patient_id: Number(e.target.value) }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">เลือกผู้ป่วย</option>
+                {patients.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.first_name} {patient.last_name} (ID: {patient.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Doctor</label>
+              <select
+                value={createForm.doctor_id || ""}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, doctor_id: Number(e.target.value) }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">เลือกแพทย์</option>
+                {doctors.map((doctor) => (
+                  <option key={doctor.id} value={doctor.id}>
+                    {doctor.username} (ID: {doctor.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Diagnosis</label>
+              <input
+                type="text"
+                value={createForm.diagnosis}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, diagnosis: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Treatment</label>
+              <input
+                type="text"
+                value={createForm.treatment}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, treatment: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Note</label>
+            <textarea
+              value={createForm.note}
+              onChange={(e) => setCreateForm((prev) => ({ ...prev, note: e.target.value }))}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          {createError && <p className="text-xs text-red-600">{createError}</p>}
+
+          <DialogFooter>
+            <button
+              onClick={() => {
+                setIsCreateOpen(false)
+                resetCreateForm()
+              }}
+              className="px-3 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
+              ยกเลิก
+            </button>
+            <button
+              onClick={onSubmitCreate}
+              disabled={isCreating}
+              className="px-3 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300"
+            >
+              {isCreating ? "กำลังสร้าง..." : "สร้าง Medical Record"}
             </button>
           </DialogFooter>
         </DialogContent>

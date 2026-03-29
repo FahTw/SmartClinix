@@ -1,0 +1,170 @@
+### MDD API test suite
+### Use with VS Code REST Client extension
+
+@authBase = http://localhost:8082
+@patientBase = http://localhost:8080
+@appointmentBase = http://localhost:8083
+@medicalBase = http://localhost:8081
+@contentType = application/json
+
+### =========================
+### AUTH SERVICE
+### =========================
+
+### Register doctor user
+POST {{authBase}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "doctor01",
+  "password": "Pass1234!",
+  "role": "doctor"
+}
+
+### Register staff user
+POST {{authBase}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "staff01",
+  "password": "Pass1234!",
+  "role": "staff"
+}
+
+### Login (copy token to @authToken)
+POST {{authBase}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "doctor01",
+  "password": "Pass1234!"
+}
+
+@authToken = REPLACE_WITH_BEARER_TOKEN
+
+### Get current user profile
+GET {{authBase}}/auth/me
+Authorization: Bearer {{authToken}}
+
+### List doctors
+GET {{authBase}}/auth/doctors
+
+
+### =========================
+### PATIENT SERVICE
+### =========================
+
+### Create patient
+POST {{patientBase}}/patients
+Content-Type: {{contentType}}
+
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "age": 29,
+  "gender": "female",
+  "personal_id": "1234567890123"
+}
+
+### List patients
+GET {{patientBase}}/patients
+
+### Get patient by ID
+GET {{patientBase}}/patients/1
+
+### Update patient
+PUT {{patientBase}}/patients/1
+Content-Type: {{contentType}}
+
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "age": 30,
+  "gender": "female",
+  "personal_id": "1234567890123"
+}
+
+### Delete patient
+DELETE {{patientBase}}/patients/1
+
+
+### =========================
+### APPOINTMENT SERVICE
+### =========================
+
+### Create appointment (triggers RabbitMQ event)
+POST {{appointmentBase}}/appointments
+Content-Type: {{contentType}}
+
+{
+  "patient_id": 1,
+  "doctor_id": 1,
+  "date": "2026-03-30",
+  "time": "10:30",
+  "description": "General checkup",
+  "status": "scheduled"
+}
+
+### List appointments
+GET {{appointmentBase}}/appointments
+
+### Update appointment
+PUT {{appointmentBase}}/appointments/1
+Content-Type: {{contentType}}
+
+{
+  "patient_id": 1,
+  "doctor_id": 1,
+  "date": "2026-03-31",
+  "time": "11:00",
+  "description": "Updated checkup",
+  "status": "confirmed"
+}
+
+### Delete appointment
+DELETE {{appointmentBase}}/appointments/1
+
+### Proxy list patients from appointment service
+GET {{appointmentBase}}/patients
+
+
+### =========================
+### MEDICAL RECORDS SERVICE
+### =========================
+
+### List medical records (record should appear after appointment create)
+GET {{medicalBase}}/medical-records
+
+### Get medical record by ID
+GET {{medicalBase}}/medical-records/1
+
+### Create medical record (manual test)
+POST {{medicalBase}}/medical-records
+Content-Type: {{contentType}}
+
+{
+  "appointment_id": 999,
+  "patient_id": 1,
+  "doctor_id": 1,
+  "visit_date": "2026-03-30T10:30:00Z",
+  "diagnosis": "Initial diagnosis",
+  "treatment": "Initial treatment",
+  "note": "Manual record for API test"
+}
+
+### Update medical record
+PUT {{medicalBase}}/medical-records/1
+Content-Type: {{contentType}}
+
+{
+  "appointment_id": 1,
+  "patient_id": 1,
+  "doctor_id": 1,
+  "visit_date": "2026-03-30T10:30:00Z",
+  "diagnosis": "Updated diagnosis",
+  "treatment": "Updated treatment",
+  "note": "Updated by API test"
+}
+
+### Delete medical record
+DELETE {{medicalBase}}/medical-records/1

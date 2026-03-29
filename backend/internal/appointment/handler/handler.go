@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -65,7 +66,9 @@ func (h *AppointmentHandler) Create(c *gin.Context) {
 		}
 		publishCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = h.publisher.PublishAppointmentCreated(publishCtx, appt)
+		if err := h.publisher.PublishAppointmentCreated(publishCtx, appt); err != nil {
+			log.Printf("❌ Failed to publish appointment event for appointment_id=%d: %v", appt.ID, err)
+		}
 	}()
 
 	c.JSON(http.StatusCreated, appt)

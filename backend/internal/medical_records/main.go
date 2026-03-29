@@ -10,6 +10,7 @@ import (
 	"medical_records/model"
 	"medical_records/repository"
 	"os"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -39,9 +40,15 @@ func main() {
 	// Start appointment event consumer
 	consumer := messaging.NewAppointmentEventConsumer(rabbitMQURL, medicalRecordRepo)
 	go func() {
-		err := consumer.ConsumeAppointmentEvents(context.Background())
-		if err != nil {
-			log.Printf("❌ Consumer error: %v", err)
+		for {
+			err := consumer.ConsumeAppointmentEvents(context.Background())
+			if err != nil {
+				log.Printf("❌ Consumer error: %v", err)
+			}
+
+			// Retry forever because RabbitMQ may not be ready on first startup.
+			log.Println("⏳ Reconnecting consumer in 5s...")
+			time.Sleep(5 * time.Second)
 		}
 	}()
 
