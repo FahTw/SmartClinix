@@ -52,5 +52,5 @@ func main() {
 
 	// 7. รัน Server
 	log.Printf("🚀 Patient Service running on port %s", cfg.Server.Port)
-	// r.Run(":" + cfg.Server.Port)
+	r.Run(":" + cfg.Server.Port)
 }

@@ -5,14 +5,14 @@ import { useEffect, useMemo, useState } from "react"
 import PatientRegist from "../../components/feature/PateintRegist";
 import { Calendar } from "@/components/ui/calendar"
 import Link from "next/link"
-import { getAppointments, getPatients } from "@/lib/api";
+import { getAppointments, getPatients, Patient } from "@/lib/api";
 
 type AppointmentStatus = "scheduled" | "completed" | "cancelled"
 
 interface Appointment {
   id: number
-  patient_name: string
-  doctor_name: string
+  patient_id: number
+  doctor_id: number
   date: string
   time: string
   description: string
@@ -20,8 +20,8 @@ interface Appointment {
 }
 interface ApiAppointment {
   id: number
-  patient_name: string
-  doctor_name: string
+  patient_id: number
+  doctor_id: number
   date: string
   time: string
   description?: string
@@ -50,8 +50,8 @@ function normalizeStatus(status?: string): AppointmentStatus {
 function mapApiAppointment(item: ApiAppointment): Appointment {
   return {
     id: item.id,
-    patient_name: item.patient_name,
-    doctor_name: item.doctor_name,
+    patient_id: item.patient_id,
+    doctor_id: item.doctor_id,
     date: item.date,
     time: item.time,
     description: item.description || "-",
@@ -59,10 +59,19 @@ function mapApiAppointment(item: ApiAppointment): Appointment {
   }
 }
 
+function getPatientDisplayName(patients: Patient[], patientID: number): string {
+  const patient = patients.find((item) => item.id === patientID)
+  if (!patient) {
+    return `ID: ${patientID}`
+  }
+  return `${patient.first_name} ${patient.last_name}`
+}
+
 export default function Home() {
   const [isPatientRegistOpen, setIsPatientRegistOpen] = useState(false)
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [patients, setPatients] = useState<Patient[]>([])
   const [totalPatients, setTotalPatients] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -80,6 +89,7 @@ export default function Home() {
           : []
 
         setAppointments(mappedAppointments)
+        setPatients(Array.isArray(patientRes) ? patientRes : [])
         setTotalPatients(Array.isArray(patientRes) ? patientRes.length : 0)
       } catch (err) {
         console.error("Failed to load dashboard data", err)
@@ -190,7 +200,7 @@ export default function Home() {
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">{appointment.patient_name}</span>
+                        <span className="text-sm font-medium text-gray-900">{getPatientDisplayName(patients, appointment.patient_id)}</span>
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusClassMap[appointment.status]}`}>
                           {statusTextMap[appointment.status]}
                         </span>
@@ -213,7 +223,7 @@ export default function Home() {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          {appointment.doctor_name}
+                          Doctor ID: {appointment.doctor_id}
                         </span>
                       </div>
                     </div>

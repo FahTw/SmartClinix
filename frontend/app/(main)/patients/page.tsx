@@ -1,20 +1,9 @@
 "use client"
 
-import { getPatients } from "@/lib/api"
+import { getPatients, Patient } from "@/lib/api"
 import PateintRegist from "../../../components/feature/PateintRegist"
 import Header from "../../../components/layout/Header"
 import { useEffect, useMemo, useState } from "react"
-
-type Patient = {
-    id: number
-    first_name: string
-    last_name: string
-    age: number
-    gender: string
-    personal_id: string
-    pharmacist_history: string[]
-    disease_history: string[]
-}
 
 const PatientPage = () => {
     const [isDialogOpen, setIsDialogOpen] = useState(false)

@@ -2,9 +2,12 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    command: >
+      sh -c "rabbitmq-plugins enable --offline rabbitmq_prometheus; rabbitmq-server"
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -54,7 +57,7 @@ services:
   medical-records-db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: C
+      POSTGRES_DB: medical_records_db
       POSTGRES_USER: medical_user
       POSTGRES_PASSWORD: medical_pass
     ports:
@@ -144,8 +147,11 @@ services:
       - DB_NAME=medical_records_db
       - DB_SSLMODE=disable
       - SERVER_PORT=8081
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       medical-records-db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - mdd-network
@@ -165,9 +171,65 @@ services:
       - DB_NAME=appointment_db
       - DB_SSLMODE=disable
       - SERVER_PORT=8083
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       appointment-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - mdd-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - mdd-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - mdd-network
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    container_name: cadvisor
+    ports:
+      - "8088:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    privileged: true
     networks:
       - mdd-network
     restart: unless-stopped
@@ -178,6 +240,8 @@ networks:
 
 volumes:
   rabbitmq_data:
+  prometheus_data:
+  grafana_data:
   auth_pgdata:
   patient_pgdata:
   medical_pgdata:

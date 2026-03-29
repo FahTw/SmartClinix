@@ -5,23 +5,37 @@ const API_ROUTES = {
   AUTH: 'http://localhost:8082/auth',
 };
 
+export type Patient = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  age: number;
+  gender: string;
+  personal_id: string;
+  pharmacist_history?: string[];
+  disease_history?: string[];
+};
+
 export type MedicalRecordPayload = {
-  patient_name: string;
-  doctor_name: string;
+  appointment_id: number;
+  patient_id: number;
+  doctor_id: number;
   visit_date: string;
   diagnosis: string;
   treatment: string;
-  note: string;
+  note?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type MedicalRecord = Omit<MedicalRecordPayload, 'note'> & {
   id: number;
-  note: string | null;
+  note?: string | null;
 };
 
 export type AppointmentPayload = {
-  patient_name: string;
-  doctor_name: string;
+  patient_id: number;
+  doctor_id: number;
   date: string;
   time: string;
   description: string;
@@ -49,6 +63,12 @@ export type User = {
   id: number;
   username: string;
   role: string;
+};
+
+export type Doctor = {
+	id: number;
+	username: string;
+	role: 'doctor';
 };
 
 // Auth helpers
@@ -141,7 +161,8 @@ export async function createAppointment(appointmentData: AppointmentPayload) {
     body: JSON.stringify(appointmentData),
   });
   if (!res.ok) {
-    throw new Error('Failed to create appointment');
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to create appointment');
   }
   return res.json() as Promise<Appointment>;
 }
@@ -155,9 +176,21 @@ export async function updateAppointment(id: number, appointmentData: Appointment
     body: JSON.stringify(appointmentData),
   });
   if (!res.ok) {
-    throw new Error('Failed to update appointment');
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to update appointment');
   }
   return res.json() as Promise<Appointment>;
+}
+
+export async function deleteAppointment(id: number) {
+  const res = await fetch(`${API_ROUTES.APPOINTMENTS}/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to delete appointment');
+  }
+  return res.json() as Promise<{ message: string }>;
 }
 
 export async function getMedicalRecords() {
@@ -211,7 +244,19 @@ export async function getPatients() {
   if (!res.ok) {
     throw new Error('Failed to fetch patients');
   }
-  return res.json();
+  return res.json() as Promise<Patient[]>;
+}
+
+export async function getDoctors() {
+  try {
+    const res = await fetch(`${API_ROUTES.AUTH}/doctors`);
+    if (!res.ok) {
+      return [] as Doctor[];
+    }
+    return res.json() as Promise<Doctor[]>;
+  } catch {
+    return [] as Doctor[];
+  }
 }
 
 export async function createPatient(patientData: any) {
@@ -223,7 +268,8 @@ export async function createPatient(patientData: any) {
     body: JSON.stringify(patientData),
   });
   if (!res.ok) {
-    throw new Error('Failed to create patient');
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Failed to create patient');
   }
   return res.json();
 }

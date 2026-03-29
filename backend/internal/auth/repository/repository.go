@@ -34,6 +34,12 @@ func (r *AuthRepository) GetUserByID(id uint) (*model.User, error) {
 	return &user, err
 }
 
+func (r *AuthRepository) ListUsersByRole(role string) ([]model.User, error) {
+	var users []model.User
+	err := r.db.Where("role = ?", role).Order("id ASC").Find(&users).Error
+	return users, err
+}
+
 func (r *AuthRepository) GenerateJWT(user *model.User) (string, error) {
 	if r.jwtSecret == "" {
 		return "", fmt.Errorf("JWT_SECRET is not set")

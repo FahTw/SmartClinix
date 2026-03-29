@@ -128,3 +128,22 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		"role":     user.Role,
 	})
 }
+
+func (h *AuthHandler) ListDoctors(c *gin.Context) {
+	users, err := h.repo.ListUsersByRole("doctor")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list doctors"})
+		return
+	}
+
+	response := make([]gin.H, 0, len(users))
+	for _, user := range users {
+		response = append(response, gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"role":     user.Role,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
+}

@@ -43,6 +43,7 @@ func main() {
 	{
 		authGroup.POST("/register", authHandler.Register)
 		authGroup.POST("/login", authHandler.Login)
+		authGroup.GET("/doctors", authHandler.ListDoctors)
 
 		protected := authGroup.Group("")
 		protected.Use(middleware.RequireAuth())

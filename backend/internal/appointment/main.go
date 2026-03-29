@@ -49,7 +49,7 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "POST", "PUT", "OPTIONS"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Content-Type", "Authorization"},
 	}))
 
@@ -58,8 +58,9 @@ func main() {
 	r.GET("/patients", apptHandler.GetPatients)
 	r.POST("/appointments", apptHandler.Create)
 	r.PUT("/appointments/:id", apptHandler.Update)
+	r.DELETE("/appointments/:id", apptHandler.Delete)
 
 	// 7. รัน Server
 	log.Printf("🚀 Appointment Service running on port 8083")
-	// r.Run(":8083")
+	r.Run(":8083")
 }

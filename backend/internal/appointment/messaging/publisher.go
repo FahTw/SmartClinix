@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	AppointmentCreatedQueue  = "appointment_created"
 	MedicalRecordNeededQueue = "medical_record_needed"
 )
 
@@ -53,6 +52,10 @@ func NewAppointmentPublisherFromEnv() *AppointmentPublisher {
 
 // PublishAppointmentCreated ส่ง event เมื่อสร้างนัดหมายใหม่
 func (p *AppointmentPublisher) PublishAppointmentCreated(ctx context.Context, appointment model.Appointment) error {
+	if appointment.PatientID == 0 || appointment.DoctorID == 0 {
+		return fmt.Errorf("patient_id and doctor_id are required for appointment event")
+	}
+
 	conn, err := amqp.Dial(p.rabbitMQURL)
 	if err != nil {
 		return err
@@ -65,15 +68,9 @@ func (p *AppointmentPublisher) PublishAppointmentCreated(ctx context.Context, ap
 	}
 	defer ch.Close()
 
-	// ประกาศ Queue สำหรับ Patient service
-	q, err := ch.QueueDeclare(AppointmentCreatedQueue, true, false, false, false, nil)
-	if err != nil {
-		return err
-	}
-
 	event := AppointmentCreatedEvent{
 		EventID:    fmt.Sprintf("appointment-created-%d-%d", appointment.ID, time.Now().UnixNano()),
-		EventType:  "appointment_created",
+		EventType:  "medical_record_needed",
 		OccurredAt: time.Now().UTC(),
 	}
 
@@ -89,20 +86,7 @@ func (p *AppointmentPublisher) PublishAppointmentCreated(ctx context.Context, ap
 		return err
 	}
 
-	// ส่งไป appointment_created queue
-	err = ch.PublishWithContext(ctx, "", q.Name, false, false,
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent,
-			Timestamp:    time.Now().UTC(),
-			Body:         body,
-		})
-
-	if err != nil {
-		return err
-	}
-
-	// ส่ง event เดียวกันไปยัง medical_record_needed queue เพื่อให้ medical_records service สร้าง record
+	// ส่ง event ไปยัง medical_record_needed queue เพื่อให้ medical_records service สร้าง record
 	qMedical, err := ch.QueueDeclare(MedicalRecordNeededQueue, true, false, false, false, nil)
 	if err != nil {
 		return err

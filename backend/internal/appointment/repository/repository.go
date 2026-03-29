@@ -2,6 +2,7 @@ package repository
 
 import (
 	"appointment/model"
+
 	"gorm.io/gorm"
 )
 
@@ -9,6 +10,7 @@ type AppointmentRepository interface {
 	Create(appt *model.Appointment) error
 	GetByID(id uint) (*model.Appointment, error)
 	Update(appt *model.Appointment) error
+	Delete(id uint) error
 	FindAll() ([]*model.Appointment, error)
 }
 
@@ -25,7 +27,6 @@ func (r *appointmentRepo) FindAll() ([]*model.Appointment, error) {
 	return appts, err
 }
 
-
 func (r *appointmentRepo) Create(appt *model.Appointment) error {
 	return r.db.Create(appt).Error
 }
@@ -38,4 +39,8 @@ func (r *appointmentRepo) GetByID(id uint) (*model.Appointment, error) {
 
 func (r *appointmentRepo) Update(appt *model.Appointment) error {
 	return r.db.Save(appt).Error
+}
+
+func (r *appointmentRepo) Delete(id uint) error {
+	return r.db.Delete(&model.Appointment{}, id).Error
 }

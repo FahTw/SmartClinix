@@ -9,6 +9,7 @@ import (
 	"medical_records/messaging"
 	"medical_records/model"
 	"medical_records/repository"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -30,9 +31,13 @@ func main() {
 	medicalRecordRepo := repository.NewMedicalRecordRepository(db)
 
 	medicalRecordHandler := handler.NewMedicalRecordHandler(medicalRecordRepo)
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://guest:guest@rabbitmq:5672/"
+	}
 
 	// Start appointment event consumer
-	consumer := messaging.NewAppointmentEventConsumer("amqp://guest:guest@rabbitmq:5672/", medicalRecordRepo)
+	consumer := messaging.NewAppointmentEventConsumer(rabbitMQURL, medicalRecordRepo)
 	go func() {
 		err := consumer.ConsumeAppointmentEvents(context.Background())
 		if err != nil {
@@ -52,5 +57,5 @@ func main() {
 	r.PUT("/medical-records/:id", medicalRecordHandler.Update)
 	r.DELETE("/medical-records/:id", medicalRecordHandler.Delete)
 
-	// r.Run(":8081")
+	r.Run(":8081")
 }
