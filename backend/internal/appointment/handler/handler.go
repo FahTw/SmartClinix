@@ -1,28 +1,34 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
+	"appointment/client"
+	"appointment/messaging"
 	"appointment/model"
 	"appointment/repository"
 
 	"github.com/gin-gonic/gin"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type AppointmentHandler struct {
-	repo repository.AppointmentRepository
+	repo          repository.AppointmentRepository
+	publisher     *messaging.AppointmentPublisher
+	patientClient *client.PatientClient
 }
 
-func NewAppointmentHandler(repo repository.AppointmentRepository) *AppointmentHandler {
-	return &AppointmentHandler{repo}
+func NewAppointmentHandler(repo repository.AppointmentRepository, publisher *messaging.AppointmentPublisher, patientClient *client.PatientClient) *AppointmentHandler {
+	return &AppointmentHandler{
+		repo:          repo,
+		publisher:     publisher,
+		patientClient: patientClient,
+	}
 }
 
-// 🟢 API: สร้างนัดหมายใหม่
+// API: สร้างนัดหมายใหม่
 func (h *AppointmentHandler) Create(c *gin.Context) {
 	var appt model.Appointment
 	if err := c.ShouldBindJSON(&appt); err != nil {
@@ -30,30 +36,14 @@ func (h *AppointmentHandler) Create(c *gin.Context) {
 		return
 	}
 	if err := h.repo.Create(&appt); err != nil {
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "DB Error: " + err.Error()})
-    return
-}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB Error: " + err.Error()})
+		return
+	}
 
-	go func(appointmentData model.Appointment) {
-		conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-		if err != nil {
-			return
-		}
-		defer conn.Close()
-
-		ch, _ := conn.Channel()
-		defer ch.Close()
-
-		q, _ := ch.QueueDeclare("appointment_created", false, false, false, false, nil)
-
-		body, _ := json.Marshal(appointmentData)
-
-		ch.PublishWithContext(c.Request.Context(), "", q.Name, false, false,
-			amqp.Publishing{
-				ContentType: "application/json",
-				Body:        body,
-			})
-	}(appt)
+	// ส่ง event ไปยัง message queue (asynchronously)
+	go func() {
+		_ = h.publisher.PublishAppointmentCreated(c.Request.Context(), appt)
+	}()
 
 	c.JSON(http.StatusCreated, appt)
 }
@@ -65,6 +55,7 @@ func (h *AppointmentHandler) GetAll(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, appts)
 }
+
 // 🟡 API: อัปเดตการนัดหมาย (พร้อมเช็คเงื่อนไข 24 ชั่วโมง)
 func (h *AppointmentHandler) Update(c *gin.Context) {
 	idParam := c.Param("id")
@@ -110,4 +101,14 @@ func (h *AppointmentHandler) Update(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, existingAppt)
+}
+
+// GetPatients เรียกข้อมูลผู้ป่วยทั้งหมดจาก Patient Service
+func (h *AppointmentHandler) GetPatients(c *gin.Context) {
+	patients, err := h.patientClient.GetAllPatients()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch patients: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, patients)
 }

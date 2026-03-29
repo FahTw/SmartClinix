@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"medical_records/config"
 	"medical_records/database"
 	"medical_records/handler"
+	"medical_records/messaging"
 	"medical_records/model"
 	"medical_records/repository"
 
@@ -28,6 +30,16 @@ func main() {
 	medicalRecordRepo := repository.NewMedicalRecordRepository(db)
 
 	medicalRecordHandler := handler.NewMedicalRecordHandler(medicalRecordRepo)
+
+	// Start appointment event consumer
+	consumer := messaging.NewAppointmentEventConsumer("amqp://guest:guest@rabbitmq:5672/", medicalRecordRepo)
+	go func() {
+		err := consumer.ConsumeAppointmentEvents(context.Background())
+		if err != nil {
+			log.Printf("❌ Consumer error: %v", err)
+		}
+	}()
+
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
@@ -40,5 +52,5 @@ func main() {
 	r.PUT("/medical-records/:id", medicalRecordHandler.Update)
 	r.DELETE("/medical-records/:id", medicalRecordHandler.Delete)
 
-	r.Run(":8081")
+	// r.Run(":8081")
 }

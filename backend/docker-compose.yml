@@ -1,4 +1,20 @@
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - mdd-network
+
   auth-db:
     image: postgres:15-alpine
     environment:
@@ -161,6 +177,7 @@ networks:
     driver: bridge
 
 volumes:
+  rabbitmq_data:
   auth_pgdata:
   patient_pgdata:
   medical_pgdata:
